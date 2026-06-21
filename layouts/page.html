@@ -1,0 +1,22 @@
+{{ define "sidebar-left" }}
+  {{ partialCached "sidebar-left.html" . .CurrentSection.RelPermalink }}
+{{ end }}
+
+{{ define "main" }}
+  <article>
+    <h1>{{ .Title }}</h1>
+    {{ .Content }}
+    {{- if or .Params.confluence_url .Params.labels }}
+      <footer class="page-meta">
+        {{- with .Params.confluence_url }}
+          <p><a href="{{ . }}" target="_blank" rel="noopener">Confluence で開く</a></p>
+        {{- end }}
+        {{- with .Params.labels }}
+          <p>ラベル:
+            {{- range . }} <span class="label">{{ . }}</span>{{- end }}
+          </p>
+        {{- end }}
+      </footer>
+    {{- end }}
+  </article>
+{{ end }}

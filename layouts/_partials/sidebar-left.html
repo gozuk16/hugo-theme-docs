@@ -1,0 +1,11 @@
+{{- $section := .CurrentSection }}
+{{- with $section }}
+  <nav aria-label="ページ一覧">
+    <h2><a href="{{ .RelPermalink }}">{{ .Title }}</a></h2>
+    <ul>
+      {{- range sort .RegularPages "Title" "asc" }}
+        <li><a href="{{ .RelPermalink }}">{{ .Title }}</a></li>
+      {{- end }}
+    </ul>
+  </nav>
+{{- end }}
