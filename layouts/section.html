@@ -1,0 +1,15 @@
+{{ define "sidebar-left" }}
+  {{ partialCached "sidebar-left.html" . .CurrentSection.RelPermalink }}
+{{ end }}
+
+{{ define "main" }}
+  <h1>{{ .Title }}</h1>
+  <ul>
+    {{- range sort .RegularPages "Title" "asc" }}
+      <li>
+        <a href="{{ .RelPermalink }}">{{ .Title }}</a>
+        {{- with .Date }} <span class="date">{{ .Format "2006-01-02" }}</span>{{- end }}
+      </li>
+    {{- end }}
+  </ul>
+{{ end }}

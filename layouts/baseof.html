@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="{{ site.Language.Locale }}">
+<head>
+  <title>{{ if .IsHome }}{{ site.Title }}{{ else }}{{ .Title }} - {{ site.Title }}{{ end }}</title>
+  {{ partialCached "head.html" . "global" }}
+</head>
+<body class="{{ .Kind }}"{{ if eq .Kind "page" }} data-pagefind-body{{ end }}>
+  <header>
+    {{ partialCached "header.html" . "global" }}
+  </header>
+  {{- if .IsHome }}
+  <main>
+    {{ block "main" . }}{{ end }}
+  </main>
+  {{- else }}
+  <aside class="sidebar-left">
+    {{ block "sidebar-left" . }}{{ end }}
+  </aside>
+  <main>
+    {{ block "main" . }}{{ end }}
+  </main>
+  {{- end }}
+  <footer>
+    {{ partialCached "footer.html" . "global" }}
+  </footer>
+</body>
+</html>
