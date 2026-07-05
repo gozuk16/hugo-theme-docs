@@ -2,9 +2,9 @@
 body {
   display: grid;
   grid-template:
-    "header" auto
+    "header header" auto
     "sidebar main" 1fr
-    "footer" auto
+    "footer footer" auto
     / 240px 1fr;
   min-height: 100vh;
   margin: 0;
@@ -74,6 +74,21 @@ code { background: #f5f5f5; padding: .1rem .3rem; border-radius: 2px; font-size:
 pre code { background: none; padding: 0; }
 img { max-width: 100%; height: auto; }
 blockquote { border-left: 4px solid #ddd; margin: 1rem 0; padding: .5rem 1rem; color: #555; }
+
+/* GFM Alerts */
+.alert { border-left: 4px solid; padding: .5rem 1rem; margin: 1rem 0; border-radius: 0 4px 4px 0; }
+.alert-title { font-weight: bold; margin: 0 0 .25rem; text-transform: capitalize; font-size: .9rem; }
+.alert p:last-child { margin-bottom: 0; }
+.alert-note  { border-color: #1a7f37; background: #f0fff4; }
+.alert-note  .alert-title { color: #1a7f37; }
+.alert-tip   { border-color: #1a7f37; background: #f0fff4; }
+.alert-tip   .alert-title { color: #1a7f37; }
+.alert-important { border-color: #8250df; background: #f5f0ff; }
+.alert-important .alert-title { color: #8250df; }
+.alert-warning { border-color: #d4a72c; background: #fffbeb; }
+.alert-warning .alert-title { color: #9a6700; }
+.alert-caution { border-color: #cf222e; background: #fff0f0; }
+.alert-caution .alert-title { color: #cf222e; }
 
 /* ページメタ */
 .page-meta {

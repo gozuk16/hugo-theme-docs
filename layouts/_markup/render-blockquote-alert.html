@@ -1,0 +1,5 @@
+{{- $type := .AlertType | lower -}}
+<blockquote class="alert alert-{{ $type }}">
+  <p class="alert-title">{{ $type | title }}</p>
+  {{- .Text -}}
+</blockquote>
