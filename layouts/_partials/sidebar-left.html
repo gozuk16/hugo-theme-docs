@@ -1,15 +1,50 @@
+{{- $page := . }}
 {{- $section := .CurrentSection }}
 {{- with $section }}
+  {{- $pages := .RegularPages }}
+
+  {{- /* スペース表示名: いずれかのページの space_title を採用（無ければセクション名） */}}
   {{- $title := .Title }}
-  {{- range first 1 .RegularPages }}
-    {{- with .Params.space_title }}{{- $title = . }}{{- end }}
+  {{- range $p := $pages }}
+    {{- if and (eq $title $section.Title) $p.Params.space_title }}
+      {{- $title = $p.Params.space_title }}
+    {{- end }}
   {{- end }}
-  <nav aria-label="ページ一覧">
-    <h2><a href="{{ .RelPermalink }}">{{ $title }}</a></h2>
-    <ul>
-      {{- range sort .RegularPages "Title" "asc" }}
-        <li><a href="{{ .RelPermalink }}">{{ .Title }}</a></li>
+
+  {{- /* page_id → ページ の索引 */}}
+  {{- $byID := dict }}
+  {{- range $p := $pages }}
+    {{- with $p.Params.page_id }}
+      {{- $byID = merge $byID (dict . $p) }}
+    {{- end }}
+  {{- end }}
+
+  {{- /* 現在ページの祖先 page_id 集合（自動展開に使う）。深さは20で打ち切る */}}
+  {{- $ancestors := slice }}
+  {{- $pid := $page.Params.parent_id | default "" }}
+  {{- range seq 20 }}
+    {{- if $pid }}
+      {{- $ancestors = $ancestors | append $pid }}
+      {{- $parent := index $byID $pid }}
+      {{- if $parent }}
+        {{- $pid = $parent.Params.parent_id | default "" }}
+      {{- else }}
+        {{- $pid = "" }}
       {{- end }}
-    </ul>
+    {{- end }}
+  {{- end }}
+
+  {{- /* ルート: parent_id が空、または親が同セクションに存在しない（解決不能な親はルートに出す） */}}
+  {{- $roots := slice }}
+  {{- range $p := $pages }}
+    {{- $ppid := $p.Params.parent_id | default "" }}
+    {{- if or (not $ppid) (not (index $byID $ppid)) }}
+      {{- $roots = $roots | append $p }}
+    {{- end }}
+  {{- end }}
+
+  <nav aria-label="ページ一覧" class="page-tree">
+    <h2><a href="{{ .RelPermalink }}">{{ $title }}</a></h2>
+    {{- partial "sidebar-tree.html" (dict "nodes" $roots "pages" $pages "ancestors" $ancestors "current" $page "depth" 0) }}
   </nav>
 {{- end }}
