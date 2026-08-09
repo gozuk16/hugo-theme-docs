@@ -1,23 +1,20 @@
 {{- /*
   ツリー1階層分を描画し、子があれば自身を再帰呼び出しする。
-  引数: nodes（描画対象）, pages（セクション全ページ）, ancestors（現在ページの祖先ID）,
-        current（現在ページ）, depth（再帰の深さ）
+  引数: nodes（描画対象・ソート済み）, byParent（parent_id → ソート済み子ページ の索引）,
+        ancestors（現在ページの祖先ID）, current（現在ページ）, depth（再帰の深さ）
 */ -}}
-{{- $pages := .pages }}
+{{- $byParent := .byParent }}
 {{- $ancestors := .ancestors }}
 {{- $current := .current }}
 {{- $depth := .depth }}
 {{- if and .nodes (lt $depth 10) }}
   <ul>
-    {{- /* weight昇順。同一weightはタイトル順で安定させるため二段ソートする */}}
-    {{- range $node := sort (sort .nodes "Title") "Weight" }}
+    {{- range $node := .nodes }}
       {{- $id := $node.Params.page_id | default "" }}
       {{- $children := slice }}
       {{- if $id }}
-        {{- range $p := $pages }}
-          {{- if eq ($p.Params.parent_id | default "") $id }}
-            {{- $children = $children | append $p }}
-          {{- end }}
+        {{- with index $byParent $id }}
+          {{- $children = . }}
         {{- end }}
       {{- end }}
       {{- $isFolder := $node.Params.is_folder }}
@@ -33,7 +30,7 @@
                 <a class="tree-link{{ if $isCurrent }} is-current{{ end }}" href="{{ $node.RelPermalink }}">{{ $node.Title }}</a>
               {{- end }}
             </summary>
-            {{- partial "sidebar-tree.html" (dict "nodes" $children "pages" $pages "ancestors" $ancestors "current" $current "depth" (add $depth 1)) }}
+            {{- partial "sidebar-tree.html" (dict "nodes" $children "byParent" $byParent "ancestors" $ancestors "current" $current "depth" (add $depth 1)) }}
           </details>
         {{- else }}
           {{- if $isFolder }}
