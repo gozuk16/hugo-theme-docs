@@ -1,11 +1,14 @@
 <!DOCTYPE html>
-<html lang="{{ site.Language.Locale }}">
+<html lang="{{ site.Language.Locale }}" data-sidebar="open">
 <head>
   <title>{{ if .IsHome }}{{ site.Title }}{{ else }}{{ .Title }} - {{ site.Title }}{{ end }}</title>
   {{ partialCached "head.html" . "global" }}
 </head>
 <body class="{{ .Kind }}"{{ if eq .Kind "page" }} data-pagefind-body{{ end }}>
   <header>
+    {{- if not .IsHome }}
+    <button type="button" class="sidebar-toggle" aria-expanded="true" aria-controls="sidebar-left" aria-label="サイドバーの表示切り替え">☰</button>
+    {{- end }}
     {{ partialCached "header.html" . "global" }}
   </header>
   {{- if .IsHome }}
@@ -13,8 +16,12 @@
     {{ block "main" . }}{{ end }}
   </main>
   {{- else }}
-  <aside class="sidebar-left">
-    {{ block "sidebar-left" . }}{{ end }}
+  <aside class="sidebar-left" id="sidebar-left">
+    <div class="sidebar-scroll">
+      {{ block "sidebar-left" . }}{{ end }}
+    </div>
+    <div class="sidebar-resizer" role="separator" tabindex="0" aria-orientation="vertical"
+         aria-controls="sidebar-left" aria-valuenow="240" aria-valuemin="160" aria-valuemax="480"></div>
   </aside>
   <main>
     {{ block "main" . }}{{ end }}
