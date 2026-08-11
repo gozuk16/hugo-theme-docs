@@ -47,19 +47,61 @@ body.home {
 /* 検索ボックス */
 .header-search { flex: 1; max-width: 400px; }
 
-/* サイドバーナビ */
+/* サイドバーナビ（階層ツリー） */
 .sidebar-left nav h2 { font-size: .95rem; margin: 0 0 .5rem; }
 .sidebar-left nav h2 a { text-decoration: none; color: inherit; }
 .sidebar-left nav ul { list-style: none; padding: 0; margin: 0; }
-.sidebar-left nav ul li a {
+/* 2階層目以降を字下げする */
+.sidebar-left nav ul ul { padding-left: .75rem; border-left: 1px solid #eee; margin-left: .35rem; }
+
+/* パディングはリンク／ラベル側だけに持たせる（.tree-item は入れ物なので付けない） */
+.sidebar-left .tree-item { display: block; }
+.sidebar-left .tree-link {
   display: block;
-  padding: .25rem .5rem;
-  text-decoration: none;
-  border-radius: 3px;
+  padding: .25rem .4rem;
   font-size: .9rem;
   color: #333;
+  text-decoration: none;
+  border-radius: 3px;
 }
-.sidebar-left nav ul li a:hover { background: #f0f0f0; }
+.sidebar-left .tree-link:hover { background: #f0f0f0; }
+.sidebar-left .tree-link.is-current { background: #e8f0fe; font-weight: bold; }
+
+/* 開閉トグル: summary の三角マーカーを自前の▶に置き換える */
+.sidebar-left details > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: .2rem;
+  padding: 0;
+}
+.sidebar-left details > summary::-webkit-details-marker { display: none; }
+.sidebar-left details > summary::before {
+  content: "▶";
+  flex: 0 0 auto;
+  font-size: .6rem;
+  color: #888;
+  transition: transform .15s;
+  padding-left: .2rem;
+}
+.sidebar-left details[open] > summary::before { transform: rotate(90deg); }
+.sidebar-left details > summary .tree-link,
+.sidebar-left details > summary .tree-label { flex: 1 1 auto; }
+
+/* フォルダはリンクではないラベル */
+.sidebar-left .tree-label {
+  display: block;
+  padding: .25rem .4rem;
+  font-size: .9rem;
+  color: #555;
+  border-radius: 3px;
+}
+.sidebar-left .is-folder > .tree-label::before { content: "📁 "; font-size: .8rem; }
+.sidebar-left details > summary:hover .tree-label { background: #f0f0f0; }
+
+/* 子を持たない項目は▶の分だけ字下げして開閉項目と縦位置を揃える */
+.sidebar-left .tree-item.is-leaf { padding-left: .9rem; }
 
 /* 日付 */
 .date { font-size: .8rem; color: #888; margin-left: .5rem; }

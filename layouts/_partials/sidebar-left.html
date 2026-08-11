@@ -1,15 +1,62 @@
+{{- $page := . }}
 {{- $section := .CurrentSection }}
 {{- with $section }}
+  {{- /* weight昇順（同一weightはタイトル順）で一度だけ並べ、以降はこの順序を使い回す */}}
+  {{- $pages := sort (sort .RegularPages "Title") "Weight" }}
+
+  {{- /* スペース表示名: いずれかのページの space_title を採用（無ければセクション名） */}}
   {{- $title := .Title }}
-  {{- range first 1 .RegularPages }}
-    {{- with .Params.space_title }}{{- $title = . }}{{- end }}
+  {{- range $p := $pages }}
+    {{- if and (eq $title $section.Title) $p.Params.space_title }}
+      {{- $title = $p.Params.space_title }}
+    {{- end }}
   {{- end }}
-  <nav aria-label="ページ一覧">
-    <h2><a href="{{ .RelPermalink }}">{{ $title }}</a></h2>
-    <ul>
-      {{- range sort .RegularPages "Title" "asc" }}
-        <li><a href="{{ .RelPermalink }}">{{ .Title }}</a></li>
+
+  {{- /* 索引を1回だけ構築する。dict + merge をループで回すと反復ごとにマップ全体が
+         複製されて O(n^2) になるため、newScratch で線形に組み立てる。
+         byID:     page_id → ページ（祖先の遡上とルート判定に使う）
+         byParent: parent_id → 子ページのスライス（ツリー描画の子検索に使う）
+         子の検索を索引にすることで、ノードごとに全ページを走査するのを避ける。 */}}
+  {{- $byIDScratch := newScratch }}
+  {{- $byParentScratch := newScratch }}
+  {{- range $p := $pages }}
+    {{- with $p.Params.page_id }}
+      {{- $byIDScratch.Set . $p }}
+    {{- end }}
+    {{- with $p.Params.parent_id }}
+      {{- $byParentScratch.Add . (slice $p) }}
+    {{- end }}
+  {{- end }}
+  {{- $byID := $byIDScratch.Values }}
+  {{- $byParent := $byParentScratch.Values }}
+
+  {{- /* 現在ページの祖先 page_id 集合（自動展開に使う）。深さは20で打ち切る */}}
+  {{- $ancestors := slice }}
+  {{- $pid := $page.Params.parent_id | default "" }}
+  {{- range seq 20 }}
+    {{- if $pid }}
+      {{- $ancestors = $ancestors | append $pid }}
+      {{- $parent := index $byID $pid }}
+      {{- if $parent }}
+        {{- $pid = $parent.Params.parent_id | default "" }}
+      {{- else }}
+        {{- $pid = "" }}
       {{- end }}
-    </ul>
+    {{- end }}
+  {{- end }}
+
+  {{- /* ルート: parent_id が空、または親が同セクションに存在しない（解決不能な親はルートに出す）。
+         $pages が既に整列済みなので、この時点で並び順は確定している。 */}}
+  {{- $roots := slice }}
+  {{- range $p := $pages }}
+    {{- $ppid := $p.Params.parent_id | default "" }}
+    {{- if or (not $ppid) (not (index $byID $ppid)) }}
+      {{- $roots = $roots | append $p }}
+    {{- end }}
+  {{- end }}
+
+  <nav aria-label="ページ一覧" class="page-tree">
+    <h2><a href="{{ .RelPermalink }}">{{ $title }}</a></h2>
+    {{- partial "sidebar-tree.html" (dict "nodes" $roots "byParent" $byParent "ancestors" $ancestors "current" $page "depth" 0) }}
   </nav>
 {{- end }}

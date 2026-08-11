@@ -1,0 +1,45 @@
+{{- /*
+  ツリー1階層分を描画し、子があれば自身を再帰呼び出しする。
+  引数: nodes（描画対象・ソート済み）, byParent（parent_id → ソート済み子ページ の索引）,
+        ancestors（現在ページの祖先ID）, current（現在ページ）, depth（再帰の深さ）
+*/ -}}
+{{- $byParent := .byParent }}
+{{- $ancestors := .ancestors }}
+{{- $current := .current }}
+{{- $depth := .depth }}
+{{- if and .nodes (lt $depth 10) }}
+  <ul>
+    {{- range $node := .nodes }}
+      {{- $id := $node.Params.page_id | default "" }}
+      {{- $children := slice }}
+      {{- if $id }}
+        {{- with index $byParent $id }}
+          {{- $children = . }}
+        {{- end }}
+      {{- end }}
+      {{- $isFolder := $node.Params.is_folder }}
+      {{- $isCurrent := eq $node $current }}
+      {{- $isOpen := or (in $ancestors $id) $isCurrent }}
+      <li>
+        {{- if $children }}
+          <details{{ if $isOpen }} open{{ end }}>
+            <summary class="tree-item{{ if $isFolder }} is-folder{{ end }}">
+              {{- if $isFolder }}
+                <span class="tree-label">{{ $node.Title }}</span>
+              {{- else }}
+                <a class="tree-link{{ if $isCurrent }} is-current{{ end }}" href="{{ $node.RelPermalink }}">{{ $node.Title }}</a>
+              {{- end }}
+            </summary>
+            {{- partial "sidebar-tree.html" (dict "nodes" $children "byParent" $byParent "ancestors" $ancestors "current" $current "depth" (add $depth 1)) }}
+          </details>
+        {{- else }}
+          {{- if $isFolder }}
+            <span class="tree-item is-folder is-leaf"><span class="tree-label">{{ $node.Title }}</span></span>
+          {{- else }}
+            <span class="tree-item is-leaf"><a class="tree-link{{ if $isCurrent }} is-current{{ end }}" href="{{ $node.RelPermalink }}">{{ $node.Title }}</a></span>
+          {{- end }}
+        {{- end }}
+      </li>
+    {{- end }}
+  </ul>
+{{- end }}
