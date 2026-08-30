@@ -111,6 +111,9 @@
   var KEYBOARD_STEP = 16;
 
   resizer.addEventListener('keydown', function (event) {
+    if (isCollapsed()) {
+      return;
+    }
     var width = currentWidth();
     if (event.key === 'ArrowLeft') {
       applyWidth(width - KEYBOARD_STEP);
@@ -126,6 +129,9 @@
   });
 
   resizer.addEventListener('dblclick', function () {
+    if (isCollapsed()) {
+      return;
+    }
     applyWidth(config.default);
     store(config.widthKey, String(currentWidth()));
   });
