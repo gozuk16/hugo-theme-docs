@@ -70,7 +70,11 @@
       return;
     }
     dragging = true;
-    resizer.setPointerCapture(event.pointerId);
+    try {
+      resizer.setPointerCapture(event.pointerId);
+    } catch (e) {
+      // ポインタキャプチャが利用できない環境では無視する
+    }
     root.classList.add('sidebar-dragging');
     event.preventDefault();
   });
@@ -101,4 +105,5 @@
 
   resizer.addEventListener('pointerup', endDrag);
   resizer.addEventListener('pointercancel', endDrag);
+  resizer.addEventListener('lostpointercapture', endDrag);
 })();
