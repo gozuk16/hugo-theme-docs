@@ -202,6 +202,11 @@ html.js .sidebar-resizer:focus-visible { background: rgba(0, 0, 0, .12); }
 /* 閉じている間は掴み手を出さない（tabindex は JS 側で -1 にする） */
 html.js[data-sidebar="collapsed"] .sidebar-resizer { display: none; }
 
+/* 閉じている間は中身をタブ順・支援技術のツリーからも外す。
+   列幅0と overflow: hidden は見た目を隠すだけで、リンクはフォーカス可能なまま残るため。
+   display: none ではなく visibility: hidden にするのは、将来アニメーションを付ける余地を残すため。 */
+html.js[data-sidebar="collapsed"] .sidebar-scroll { visibility: hidden; }
+
 /* ドラッグ中は本文のテキスト選択を止める */
 html.sidebar-dragging { cursor: col-resize; }
 html.sidebar-dragging body { user-select: none; }
