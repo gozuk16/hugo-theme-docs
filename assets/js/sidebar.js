@@ -106,4 +106,27 @@
   resizer.addEventListener('pointerup', endDrag);
   resizer.addEventListener('pointercancel', endDrag);
   resizer.addEventListener('lostpointercapture', endDrag);
+
+  // キーボード操作とダブルクリックでのリセット
+  var KEYBOARD_STEP = 16;
+
+  resizer.addEventListener('keydown', function (event) {
+    var width = currentWidth();
+    if (event.key === 'ArrowLeft') {
+      applyWidth(width - KEYBOARD_STEP);
+    } else if (event.key === 'ArrowRight') {
+      applyWidth(width + KEYBOARD_STEP);
+    } else if (event.key === 'Home') {
+      applyWidth(config.default);
+    } else {
+      return;
+    }
+    event.preventDefault();
+    store(config.widthKey, String(currentWidth()));
+  });
+
+  resizer.addEventListener('dblclick', function () {
+    applyWidth(config.default);
+    store(config.widthKey, String(currentWidth()));
+  });
 })();
