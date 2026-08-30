@@ -30,6 +30,19 @@
     return isNaN(value) ? config.default : value;
   }
 
+  function clamp(width) {
+    return Math.min(config.max, Math.max(config.min, width));
+  }
+
+  // CSSの clamp() は範囲外の値を丸めてくれないことを実機で確認済みのため、
+  // 幅の制限は必ずここで行う。
+  function applyWidth(width) {
+    var value = clamp(Math.round(width));
+    root.style.setProperty('--sidebar-width', value + 'px');
+    resizer.setAttribute('aria-valuenow', String(value));
+    return value;
+  }
+
   function isCollapsed() {
     return root.getAttribute('data-sidebar') === 'collapsed';
   }
@@ -49,4 +62,43 @@
   toggle.addEventListener('click', function () {
     setCollapsed(!isCollapsed());
   });
+
+  var dragging = false;
+
+  resizer.addEventListener('pointerdown', function (event) {
+    if (isCollapsed()) {
+      return;
+    }
+    dragging = true;
+    resizer.setPointerCapture(event.pointerId);
+    root.classList.add('sidebar-dragging');
+    event.preventDefault();
+  });
+
+  resizer.addEventListener('pointermove', function (event) {
+    if (!dragging) {
+      return;
+    }
+    // ビューポート左端ではなくサイドバー左端からの距離を使う
+    // （将来レイアウトに余白が入ってもずれないようにするため）
+    applyWidth(event.clientX - aside.getBoundingClientRect().left);
+  });
+
+  function endDrag(event) {
+    if (!dragging) {
+      return;
+    }
+    dragging = false;
+    try {
+      resizer.releasePointerCapture(event.pointerId);
+    } catch (e) {
+      // ポインタが既に解放されている場合は無視する
+    }
+    root.classList.remove('sidebar-dragging');
+    // 保存はドラッグ終了時だけ行う（移動中に書き込むと負荷が高いため）
+    store(config.widthKey, String(currentWidth()));
+  }
+
+  resizer.addEventListener('pointerup', endDrag);
+  resizer.addEventListener('pointercancel', endDrag);
 })();
