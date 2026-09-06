@@ -11,3 +11,40 @@
 {{- end }}
 <link href="{{ "pagefind/pagefind-ui.css" | relURL }}" rel="stylesheet">
 <script src="{{ "pagefind/pagefind-ui.js" | relURL }}"></script>
+<script>
+  // 保存済みのサイドバー状態を初回描画の前に反映する。
+  // 外部ファイルにすると読み込みを待つ間に既定幅で描画され、ちらつくためインラインで持つ。
+  (function () {
+    var config = {
+      min: 160,
+      max: 480,
+      default: 240,
+      widthKey: 'sidebar-width',
+      collapsedKey: 'sidebar-collapsed'
+    };
+    window.sidebarConfig = config;
+    var root = document.documentElement;
+    root.classList.add('js');
+    try {
+      var width = parseInt(localStorage.getItem(config.widthKey), 10);
+      // 不正な値を入れるとグリッドの列がコンテンツ幅で自動サイズになり崩れるため、必ず検証する
+      if (!isNaN(width) && width >= config.min && width <= config.max) {
+        root.style.setProperty('--sidebar-width', width + 'px');
+      }
+      if (localStorage.getItem(config.collapsedKey) === '1') {
+        root.setAttribute('data-sidebar', 'collapsed');
+      }
+    } catch (e) {
+      // localStorage が使えない環境（プライベートモード等）では既定値のまま表示する
+    }
+  })();
+</script>
+{{- with resources.Get "js/sidebar.js" }}
+  {{- if hugo.IsDevelopment }}
+    <script src="{{ .RelPermalink }}" defer></script>
+  {{- else }}
+    {{- with . | minify | fingerprint }}
+      <script src="{{ .RelPermalink }}" integrity="{{ .Data.Integrity }}" crossorigin="anonymous" defer></script>
+    {{- end }}
+  {{- end }}
+{{- end }}

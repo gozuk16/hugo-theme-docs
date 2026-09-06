@@ -1,3 +1,12 @@
+/* サイドバーの幅。--sidebar-width は JS がインラインで上書きする。
+   --sidebar-current を経由させるのは、閉じた状態の 0px が
+   インライン指定の --sidebar-width より確実に優先されるようにするため。 */
+:root {
+  --sidebar-width: 240px;
+  --sidebar-current: var(--sidebar-width);
+}
+html[data-sidebar="collapsed"] { --sidebar-current: 0px; }
+
 /* レイアウト */
 body {
   display: grid;
@@ -5,7 +14,7 @@ body {
     "header header" auto
     "sidebar main" 1fr
     "footer footer" auto
-    / 240px 1fr;
+    / var(--sidebar-current) 1fr;
   min-height: 100vh;
   margin: 0;
   font-family: sans-serif;
@@ -22,9 +31,16 @@ header h1 { margin: 0; font-size: 1.1rem; }
 header h1 a { text-decoration: none; color: inherit; }
 .sidebar-left {
   grid-area: sidebar;
+  position: relative;
+  overflow: hidden;
+  border-right: 1px solid #ddd;
+}
+html[data-sidebar="collapsed"] .sidebar-left { border-right: none; }
+.sidebar-scroll {
+  height: 100%;
   overflow-y: auto;
   padding: 1rem;
-  border-right: 1px solid #ddd;
+  box-sizing: border-box;
 }
 main { grid-area: main; padding: 1rem 2rem; max-width: 900px; }
 footer {
@@ -146,3 +162,51 @@ blockquote { border-left: 4px solid #ddd; margin: 1rem 0; padding: .5rem 1rem; c
   margin-right: .3rem;
   font-size: .8rem;
 }
+
+/* サイドバーの開閉・リサイズ操作
+   JSが無い環境では操作できないため、既定では隠し、
+   インラインスクリプトが html に js クラスを付けたときだけ表示する。 */
+.sidebar-toggle,
+.sidebar-resizer { display: none; }
+
+html.js .sidebar-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #fff;
+  color: #333;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+html.js .sidebar-toggle:hover { background: #f0f0f0; }
+
+html.js .sidebar-resizer {
+  display: block;
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  background: transparent;
+}
+html.js .sidebar-resizer:hover,
+html.js .sidebar-resizer:focus-visible { background: rgba(0, 0, 0, .12); }
+
+/* 閉じている間は掴み手を出さない（tabindex は JS 側で -1 にする） */
+html.js[data-sidebar="collapsed"] .sidebar-resizer { display: none; }
+
+/* 閉じている間は中身をタブ順・支援技術のツリーからも外す。
+   列幅0と overflow: hidden は見た目を隠すだけで、リンクはフォーカス可能なまま残るため。
+   display: none ではなく visibility: hidden にするのは、将来アニメーションを付ける余地を残すため。 */
+html.js[data-sidebar="collapsed"] .sidebar-scroll { visibility: hidden; }
+
+/* ドラッグ中は本文のテキスト選択を止める */
+html.sidebar-dragging { cursor: col-resize; }
+html.sidebar-dragging body { user-select: none; }
