@@ -22,7 +22,7 @@
       {{- $isOpen := or (in $ancestors $id) $isCurrent }}
       <li>
         {{- if $children }}
-          <details{{ if $isOpen }} open{{ end }}>
+          <details{{ if $isOpen }} open{{ end }}{{ with $id }} data-page-id="{{ . }}"{{ end }}>
             <summary class="tree-item{{ if $isFolder }} is-folder{{ end }}">
               {{- if $isFolder }}
                 <span class="tree-label">{{ $node.Title }}</span>

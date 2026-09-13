@@ -1,10 +1,10 @@
-// サイドバーの開閉とリサイズ。
-// 保存済み状態の復元は head 内のインラインスクリプトが担当しており、
-// このファイルは利用者の操作を扱う。
+// サイドバーの開閉・リサイズと、ツリーの開閉状態の保存。
+// 保存済み状態の復元は head 内（幅・開閉）と sidebar-left.html 内（ツリー）の
+// インラインスクリプトが担当しており、このファイルは利用者の操作を扱う。
 (function () {
   var config = window.sidebarConfig || {
     min: 160, max: 480, default: 240,
-    widthKey: 'sidebar-width', collapsedKey: 'sidebar-collapsed'
+    widthKey: 'sidebar-width', collapsedKey: 'sidebar-collapsed', treeKey: 'sidebar-tree-open'
   };
 
   var root = document.documentElement;
@@ -135,4 +135,56 @@
     applyWidth(config.default);
     store(config.widthKey, String(currentWidth()));
   });
+
+  // ツリーの開閉状態の保存。
+  // 「開いているノードのID」の一覧だけを持つ。閉じたノードは一覧から外すだけで、
+  // 復元時は Hugo が描画した状態に「開く」を上乗せするため、閉じる方向の記録は不要。
+  function readOpenIds() {
+    try {
+      var ids = JSON.parse(localStorage.getItem(config.treeKey));
+      return Array.isArray(ids) ? ids.filter(function (id) { return typeof id === 'string'; }) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  var tree = aside.querySelector('.page-tree');
+  if (tree) {
+    // 読み込み時点で開いているノード（現在ページの祖先として Hugo が開いたもの）も記録する。
+    // これで別のページへ移動しても、直前に表示されていた開閉状態がそのまま残る。
+    // ブラウザによっては open 付きで描画された details に読み込み時 toggle イベントが飛ぶが、
+    // 下のリスナーが付く前に飛ぶこともあるため、イベントには頼らずここで明示的に記録する。
+    var ids = readOpenIds();
+    var changed = false;
+    var openNodes = tree.querySelectorAll('details[data-page-id][open]');
+    for (var i = 0; i < openNodes.length; i++) {
+      var openId = openNodes[i].getAttribute('data-page-id');
+      if (ids.indexOf(openId) < 0) {
+        ids.push(openId);
+        changed = true;
+      }
+    }
+    if (changed) {
+      store(config.treeKey, JSON.stringify(ids));
+    }
+
+    // toggle イベントはバブリングしないため、キャプチャで受ける
+    tree.addEventListener('toggle', function (event) {
+      var node = event.target;
+      var id = node.getAttribute && node.getAttribute('data-page-id');
+      if (!id) {
+        return;
+      }
+      var ids = readOpenIds();
+      var index = ids.indexOf(id);
+      if (node.open && index < 0) {
+        ids.push(id);
+      } else if (!node.open && index >= 0) {
+        ids.splice(index, 1);
+      } else {
+        return;
+      }
+      store(config.treeKey, JSON.stringify(ids));
+    }, true);
+  }
 })();
