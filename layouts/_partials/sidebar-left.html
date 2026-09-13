@@ -59,4 +59,34 @@
     <h2><a href="{{ .RelPermalink }}">{{ $title }}</a></h2>
     {{- partial "sidebar-tree.html" (dict "nodes" $roots "byParent" $byParent "ancestors" $ancestors "current" $page "depth" 0) }}
   </nav>
+  <script>
+    // 利用者が開いたままにしたノードを、初回描画の前に復元する。
+    // Hugo が描画した状態（現在ページの祖先は開いている）に「開く」方向だけ上乗せし、
+    // 閉じる方向には触らない。これにより移動先のページは必ずツリー上で見える。
+    // 保存は sidebar.js が担当する。ツリーの直後に置くのは、外部ファイルの読み込みを待つ間に
+    // 閉じた状態で描画されてから開く「ちらつき」を避けるため（head 内の幅の復元と同じ考え方）。
+    (function () {
+      var key = (window.sidebarConfig && window.sidebarConfig.treeKey) || 'sidebar-tree-open';
+      var ids;
+      try {
+        ids = JSON.parse(localStorage.getItem(key));
+      } catch (e) {
+        return;
+      }
+      if (!Array.isArray(ids) || !ids.length) {
+        return;
+      }
+      var open = Object.create(null);
+      for (var i = 0; i < ids.length; i++) {
+        open[ids[i]] = true;
+      }
+      var nav = document.currentScript.previousElementSibling;
+      var nodes = nav.querySelectorAll('details[data-page-id]');
+      for (var j = 0; j < nodes.length; j++) {
+        if (open[nodes[j].getAttribute('data-page-id')]) {
+          nodes[j].open = true;
+        }
+      }
+    })();
+  </script>
 {{- end }}
