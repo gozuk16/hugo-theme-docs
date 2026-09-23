@@ -135,6 +135,23 @@ pre code { background: none; padding: 0; }
 img { max-width: 100%; height: auto; }
 blockquote { border-left: 4px solid #ddd; margin: 1rem 0; padding: .5rem 1rem; color: #555; }
 
+/* Confluenceの複数カラムレイアウト（layoutSection/layoutColumn）。
+   ADF側で出力される --col-width（%）を flex-basis として使う。
+   grow: 0 で指定比率を保ち、狭い画面では min-width を下回った時点で折り返して縦積みに戻す。
+   %指定のflex-basisはgapを考慮しないため、gap 1個分を差し引いて近似する
+   （厳密には (カラム数-1)/カラム数 × gap だが、簡易的に1個分を引くだけで実用上ははみ出さない）。 */
+.layout-section {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin: 1rem 0;
+}
+.layout-column {
+  box-sizing: border-box;
+  flex: 0 1 calc(var(--col-width, 33.33%) - 1.5rem);
+  min-width: 200px;
+}
+
 /* GFM Alerts */
 .alert { border-left: 4px solid; padding: .5rem 1rem; margin: 1rem 0; border-radius: 0 4px 4px 0; }
 .alert-title { font-weight: bold; margin: 0 0 .25rem; text-transform: capitalize; font-size: .9rem; }
