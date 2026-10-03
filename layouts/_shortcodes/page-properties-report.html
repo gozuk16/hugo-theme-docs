@@ -1,0 +1,105 @@
+{{- /*
+  ページプロパティレポート（Confluence の detailssummary マクロ）。
+  引数は変換器が CQL から生成する。front matter の properties（key / value）を持つページを絞り込み、一覧表にする。
+  - labels / labels_mode（all|any）/ labels_exclude: カンマ区切りのラベル
+  - space: "current" はこのページと同じスペース。無指定なら全スペース
+  - scope（children|descendants）/ root（"current" か page_id）
+  - title_is / title_contains（大文字小文字を区別しない）
+  - created_from / created_to / lastmod_from / lastmod_to: "YYYY-MM-DD" か "now-4w" 形式（境界を含む）
+  - headings / sort_by / reverse / first_column / page_size: 表示オプション
+*/ -}}
+{{- $page := .Page }}
+{{- $labels := slice }}
+{{- with .Get "labels" }}{{ range split . "," }}{{ $labels = $labels | append (trim . " ") }}{{ end }}{{ end }}
+{{- $mode := .Get "labels_mode" | default "all" }}
+{{- $exclude := slice }}
+{{- with .Get "labels_exclude" }}{{ range split . "," }}{{ $exclude = $exclude | append (trim . " ") }}{{ end }}{{ end }}
+{{- $space := .Get "space" | default "" }}
+{{- if eq $space "current" }}{{ $space = $page.Params.space | default "" }}{{ end }}
+{{- $scope := .Get "scope" | default "" }}
+{{- $root := .Get "root" | default "" }}
+{{- if eq $root "current" }}{{ $root = $page.Params.page_id | default "" }}{{ end }}
+{{- $titleIs := .Get "title_is" | default "" }}
+{{- $titleContains := lower (.Get "title_contains" | default "") }}
+{{- $createdFrom := partial "ppr-date.html" (.Get "created_from") }}
+{{- $createdTo := partial "ppr-date.html" (.Get "created_to") }}
+{{- $lastmodFrom := partial "ppr-date.html" (.Get "lastmod_from") }}
+{{- $lastmodTo := partial "ppr-date.html" (.Get "lastmod_to") }}
+{{- $sortBy := .Get "sort_by" | default "" }}
+{{- $reverse := eq (.Get "reverse") "true" }}
+{{- $firstColumn := .Get "first_column" | default "タイトル" }}
+{{- $pageSize := int (.Get "page_size" | default "0") }}
+
+{{- /* descendants 用: page_id → parent_id の索引 */}}
+{{- $parentOf := newScratch }}
+{{- if eq $scope "descendants" }}
+  {{- range $p := site.RegularPages }}
+    {{- with $p.Params.page_id }}{{ $parentOf.Set . ($p.Params.parent_id | default "") }}{{ end }}
+  {{- end }}
+{{- end }}
+
+{{- $items := slice }}
+{{- range $p := site.RegularPages }}
+  {{- $ok := and $p.Params.properties (not $p.Params.is_folder) (ne $p $page) }}
+  {{- if and $ok $space }}{{ $ok = eq ($p.Params.space | default "") $space }}{{ end }}
+  {{- if and $ok (eq $scope "children") }}{{ $ok = eq ($p.Params.parent_id | default "") $root }}{{ end }}
+  {{- if and $ok (eq $scope "descendants") }}
+    {{- $found := false }}
+    {{- $pid := $p.Params.parent_id | default "" }}
+    {{- range seq 20 }}
+      {{- if and $pid (not $found) }}
+        {{- if eq $pid $root }}{{ $found = true }}{{ else }}{{ $pid = $parentOf.Get $pid | default "" }}{{ end }}
+      {{- end }}
+    {{- end }}
+    {{- $ok = $found }}
+  {{- end }}
+  {{- $pl := slice }}
+  {{- range ($p.Params.labels | default slice) }}{{ $pl = $pl | append (string .) }}{{ end }}
+  {{- if and $ok $labels }}
+    {{- $hit := len (intersect $labels $pl) }}
+    {{- if eq $mode "any" }}{{ $ok = gt $hit 0 }}{{ else }}{{ $ok = eq $hit (len (uniq $labels)) }}{{ end }}
+  {{- end }}
+  {{- if and $ok $exclude }}{{ $ok = eq (len (intersect $exclude $pl)) 0 }}{{ end }}
+  {{- if and $ok $titleIs }}{{ $ok = eq (lower $p.Title) (lower $titleIs) }}{{ end }}
+  {{- if and $ok $titleContains }}{{ $ok = strings.Contains (lower $p.Title) $titleContains }}{{ end }}
+  {{- $created := $p.Date.UTC.Format "2006-01-02" }}
+  {{- $lastmod := $p.Lastmod.UTC.Format "2006-01-02" }}
+  {{- if and $ok $createdFrom }}{{ $ok = ge $created $createdFrom }}{{ end }}
+  {{- if and $ok $createdTo }}{{ $ok = le $created $createdTo }}{{ end }}
+  {{- if and $ok $lastmodFrom }}{{ $ok = ge $lastmod $lastmodFrom }}{{ end }}
+  {{- if and $ok $lastmodTo }}{{ $ok = le $lastmod $lastmodTo }}{{ end }}
+  {{- if $ok }}
+    {{- $props := newScratch }}
+    {{- range $p.Params.properties }}{{ $props.Set .key .value }}{{ end }}
+    {{- $sortKey := $p.Title }}
+    {{- if $sortBy }}{{ $sortKey = (($props.Get $sortBy) | default "" | markdownify | plainify | string) }}{{ end }}
+    {{- $items = $items | append (dict "page" $p "props" $props.Values "title" $p.Title "sort" $sortKey) }}
+  {{- end }}
+{{- end }}
+
+{{- /* 既定はタイトル昇順。sort_by の同値はタイトル順（sort は安定ソート） */}}
+{{- $items = sort (sort $items "title") "sort" (cond $reverse "desc" "asc") }}
+{{- if gt $pageSize 0 }}{{ $items = first $pageSize $items }}{{ end }}
+
+{{- $headings := slice }}
+{{- with .Get "headings" }}
+  {{- range split . "," }}{{ $headings = $headings | append (trim . " ") }}{{ end }}
+{{- else }}
+  {{- range $items }}
+    {{- range .page.Params.properties }}{{ if not (in $headings .key) }}{{ $headings = $headings | append .key }}{{ end }}{{ end }}
+  {{- end }}
+{{- end }}
+
+{{- if $items }}
+<table class="page-properties-report">
+<thead><tr><th>{{ $firstColumn }}</th>{{ range $headings }}<th>{{ . }}</th>{{ end }}</tr></thead>
+<tbody>
+{{- range $items }}
+{{- $props := .props }}
+<tr><td><a href="{{ .page.RelPermalink }}">{{ .page.Title }}</a></td>{{ range $headings }}<td>{{ with index $props . }}{{ . | markdownify }}{{ end }}</td>{{ end }}</tr>
+{{- end }}
+</tbody>
+</table>
+{{- else }}
+<p class="page-properties-report-empty">条件に一致するページはありません</p>
+{{- end }}

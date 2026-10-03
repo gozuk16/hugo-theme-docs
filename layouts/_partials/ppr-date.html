@@ -1,0 +1,22 @@
+{{- /*
+  ページプロパティレポートの日付引数を "YYYY-MM-DD" にする。
+  "now" / "now-4w" / "now+1d" はビルド時刻を基準に計算する（単位: d=日 w=週 M=月 y=年）。
+  それ以外（変換器が正規化した "YYYY-MM-DD"）はそのまま返す。空なら空を返す。
+*/ -}}
+{{- $v := . | default "" }}
+{{- $out := $v }}
+{{- with findRESubmatch `^now(?:([+-]\d+)([dwMy]))?$` $v 1 }}
+  {{- $g := index . 0 }}
+  {{- $t := now.UTC }}
+  {{- with index $g 1 }}
+    {{- $n := int (strings.TrimPrefix "+" .) }}
+    {{- $u := index $g 2 }}
+    {{- if eq $u "d" }}{{ $t = $t.AddDate 0 0 $n }}
+    {{- else if eq $u "w" }}{{ $t = $t.AddDate 0 0 (mul $n 7) }}
+    {{- else if eq $u "M" }}{{ $t = $t.AddDate 0 $n 0 }}
+    {{- else }}{{ $t = $t.AddDate $n 0 0 }}
+    {{- end }}
+  {{- end }}
+  {{- $out = $t.Format "2006-01-02" }}
+{{- end }}
+{{- return $out }}
