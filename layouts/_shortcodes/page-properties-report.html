@@ -73,14 +73,16 @@
   {{- if $ok }}
     {{- $props := newScratch }}
     {{- range $p.Params.properties }}{{ $props.Set .key .value }}{{ end }}
-    {{- $sortKey := $p.Title }}
+    {{- $sortKey := $p.Lastmod.UTC.Format "2006-01-02T15:04:05" }}
     {{- if $sortBy }}{{ $sortKey = (($props.Get $sortBy) | default "" | markdownify | plainify | string) }}{{ end }}
     {{- $items = $items | append (dict "page" $p "props" $props.Values "title" $p.Title "sort" $sortKey) }}
   {{- end }}
 {{- end }}
 
-{{- /* 既定はタイトル昇順。sort_by の同値はタイトル順（sort は安定ソート） */}}
-{{- $items = sort (sort $items "title") "sort" (cond $reverse "desc" "asc") }}
+{{- /* Confluence と同じく、sort_by が無ければ最終更新日の新しい順（reverse で古い順）、
+       sort_by があればその値の昇順（reverse で降順）。同値はタイトル順（sort は安定ソート） */}}
+{{- $desc := cond (ne $sortBy "") $reverse (not $reverse) }}
+{{- $items = sort (sort $items "title") "sort" (cond $desc "desc" "asc") }}
 {{- if gt $pageSize 0 }}{{ $items = first $pageSize $items }}{{ end }}
 
 {{- $headings := slice }}
@@ -90,6 +92,21 @@
   {{- range $items }}
     {{- range .page.Params.properties }}{{ if not (in $headings .key) }}{{ $headings = $headings | append .key }}{{ end }}{{ end }}
   {{- end }}
+  {{- /* Confluence と同じく項目名の文字コード順に並べる。
+         sort 関数は言語の照合順（ja ではカタカナ・ひらがなを読み順）になり Confluence と食い違うため、
+         文字コードで比較する lt を使った挿入ソートにする */}}
+  {{- $sorted := slice }}
+  {{- range $h := $headings }}
+    {{- $out := slice }}
+    {{- $placed := false }}
+    {{- range $x := $sorted }}
+      {{- if and (not $placed) (lt $h $x) }}{{ $out = $out | append $h }}{{ $placed = true }}{{ end }}
+      {{- $out = $out | append $x }}
+    {{- end }}
+    {{- if not $placed }}{{ $out = $out | append $h }}{{ end }}
+    {{- $sorted = $out }}
+  {{- end }}
+  {{- $headings = $sorted }}
 {{- end }}
 
 {{- if $items }}
