@@ -30,7 +30,7 @@
 {{- $firstColumn := .Get "first_column" | default "タイトル" }}
 {{- $pageSize := int (.Get "page_size" | default "0") }}
 
-{{- /* descendants 用: page_id → parent_id の索引 */}}
+{{- /* descendants 用: page_id → parent_id の索引（親をたどる処理は循環に備えて20階層まで） */}}
 {{- $parentOf := newScratch }}
 {{- if eq $scope "descendants" }}
   {{- range $p := site.RegularPages }}
@@ -42,6 +42,8 @@
 {{- range $p := site.RegularPages }}
   {{- $ok := and $p.Params.properties (not $p.Params.is_folder) (ne $p $page) }}
   {{- if and $ok $space }}{{ $ok = eq ($p.Params.space | default "") $space }}{{ end }}
+  {{- /* children / descendants で root が空（page_id のないページでの root="current" 等）なら何にも一致させない */}}
+  {{- if and $ok (or (eq $scope "children") (eq $scope "descendants")) (not $root) }}{{ $ok = false }}{{ end }}
   {{- if and $ok (eq $scope "children") }}{{ $ok = eq ($p.Params.parent_id | default "") $root }}{{ end }}
   {{- if and $ok (eq $scope "descendants") }}
     {{- $found := false }}
