@@ -1,0 +1,15 @@
+{{- /*
+  ロードマッププランナー（Confluence の roadmap マクロ）。
+  変換器がページのフォルダに書き出した SVG（src）を、ビルド時に本文へ差し込む。
+  <img> で読み込むのではなく差し込むことで、ページのフォントを引き継ぎ、バーの全文や説明のツールチップも使える。
+  横に長い図は横スクロールで表示する。
+*/ -}}
+{{- with .Get "src" }}
+  {{- with $.Page.Resources.Get . }}
+<div class="roadmap" style="overflow-x:auto;margin:1rem 0">{{ .Content | safeHTML }}</div>
+  {{- else }}
+    {{- warnf "roadmap ショートコード: %s が見つかりません（%s）" . $.Page.Path }}
+  {{- end }}
+{{- else }}
+  {{- warnf "roadmap ショートコード: src が指定されていません（%s）" $.Page.Path }}
+{{- end }}
