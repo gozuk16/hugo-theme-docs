@@ -8,15 +8,12 @@
 */ -}}
 {{- $page := .Page }}
 {{- $space := .Get "space" | default ($page.Params.space | default "") }}
+{{- /* 索引はビルド中に1回だけ作る（ショートコードのたびに全ページを走査しない） */}}
+{{- $idx := partialCached "children-index.html" site "children-index" }}
+{{- $byParent := $idx.byParent }}
 {{- $rootID := $page.Params.page_id | default "" }}
 {{- with .Get "page" }}
-  {{- $title := . }}
-  {{- $rootID = "" }}
-  {{- range $p := site.RegularPages }}
-    {{- if and (not $rootID) (eq $p.Title $title) (eq ($p.Params.space | default "") $space) }}
-      {{- $rootID = $p.Params.page_id | default "" }}
-    {{- end }}
-  {{- end }}
+  {{- $rootID = index $idx.byTitle (printf "%s/%s" $space .) | default "" }}
 {{- end }}
 
 {{- $maxDepth := 1 }}
@@ -28,13 +25,6 @@
 {{- /* 見出しタグ名としてそのまま埋め込むので h1〜h6 以外は受け付けない */}}
 {{- $style := .Get "style" | default "" }}
 {{- if not (findRE `^h[1-6]$` $style) }}{{ $style = "" }}{{ end }}
-
-{{- /* parent_id → 子ページ の索引（サイドバーと同じく newScratch で線形に組み立てる） */}}
-{{- $byParentScratch := newScratch }}
-{{- range $p := site.RegularPages }}
-  {{- with $p.Params.parent_id }}{{ $byParentScratch.Add . (slice $p) }}{{ end }}
-{{- end }}
-{{- $byParent := $byParentScratch.Values }}
 
 {{- with and $rootID (index $byParent $rootID) }}
 <div class="children-macro">

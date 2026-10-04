@@ -1,0 +1,15 @@
+{{- /*
+  子ページ一覧（children ショートコード）用の索引。partialCached で呼び、ビルド中に1回だけ作る。
+  byParent: parent_id → 子ページのスライス
+  byTitle:  "スペースキー/タイトル" → page_id（page 引数で起点のページを探すのに使う。同名は先勝ち）
+*/ -}}
+{{- $byParent := newScratch }}
+{{- $byTitle := newScratch }}
+{{- range $p := site.RegularPages }}
+  {{- with $p.Params.parent_id }}{{ $byParent.Add . (slice $p) }}{{ end }}
+  {{- with $p.Params.page_id }}
+    {{- $key := printf "%s/%s" ($p.Params.space | default "") $p.Title }}
+    {{- if not ($byTitle.Get $key) }}{{ $byTitle.Set $key . }}{{ end }}
+  {{- end }}
+{{- end }}
+{{- return dict "byParent" $byParent.Values "byTitle" $byTitle.Values }}
