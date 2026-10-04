@@ -1,0 +1,41 @@
+{{- /*
+  子ページ一覧（Confluence の children マクロ）。引数は変換器がマクロの設定から生成する。
+  - page / space: 一覧の起点にするページのタイトルとスペース（無指定ならこのページ）
+  - all（"true"）/ depth: all が無ければ直下の子だけ。all があれば depth 階層まで（無指定なら上限なし。循環に備えて20階層まで）
+  - sort（creation|title|modified）/ reverse: 無指定なら Confluence のページツリー順（weight）
+  - first: 直下の子の表示件数
+  - style（h1〜h6）: 直下の子を見出しで表示し、その下の階層を箇条書きにする
+*/ -}}
+{{- $page := .Page }}
+{{- $space := .Get "space" | default ($page.Params.space | default "") }}
+{{- /* 索引はビルド中に1回だけ作る（ショートコードのたびに全ページを走査しない） */}}
+{{- $idx := partialCached "children-index.html" site "children-index" }}
+{{- $byParent := $idx.byParent }}
+{{- $rootID := $page.Params.page_id | default "" }}
+{{- with .Get "page" }}
+  {{- $rootID = index $idx.byTitle (printf "%s/%s" $space .) | default "" }}
+{{- end }}
+
+{{- $maxDepth := 1 }}
+{{- if eq (.Get "all") "true" }}
+  {{- $maxDepth = int (.Get "depth" | default "0") }}
+  {{- if le $maxDepth 0 }}{{ $maxDepth = 20 }}{{ end }}
+{{- end }}
+
+{{- /* 見出しタグ名としてそのまま埋め込むので h1〜h6 以外は受け付けない */}}
+{{- $style := .Get "style" | default "" }}
+{{- if not (findRE `^h[1-6]$` $style) }}{{ $style = "" }}{{ end }}
+
+{{- with and $rootID (index $byParent $rootID) }}
+<div class="children-macro">
+{{- partial "children-list.html" (dict
+      "nodes" .
+      "byParent" $byParent
+      "depth" 1
+      "maxDepth" $maxDepth
+      "sort" ($.Get "sort" | default "")
+      "reverse" (eq ($.Get "reverse") "true")
+      "first" (int ($.Get "first" | default "0"))
+      "style" $style) }}
+</div>
+{{- end }}
