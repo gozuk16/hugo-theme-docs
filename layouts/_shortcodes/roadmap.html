@@ -10,4 +10,6 @@
   {{- else }}
     {{- warnf "roadmap ショートコード: %s が見つかりません（%s）" . $.Page.Path }}
   {{- end }}
+{{- else }}
+  {{- warnf "roadmap ショートコード: src が指定されていません（%s）" $.Page.Path }}
 {{- end }}
