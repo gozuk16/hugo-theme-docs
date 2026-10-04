@@ -1,0 +1,51 @@
+{{- /*
+  子ページ一覧（children ショートコード）の1階層分を描画し、子があれば自身を再帰呼び出しする。
+  引数: nodes（この階層のページ・未ソート）, byParent（parent_id → 子ページ の索引）, depth（この階層の深さ。1始まり）,
+        maxDepth（表示する深さの上限）, sort / reverse（並び順）, first（件数上限。0は無制限）,
+        style（"h1"〜"h6" なら見出しで表示。再帰先には渡さない）
+  フォルダはページを出力していないためリンクにせず名前だけ表示する（サイドバーと同じ扱い）。
+*/ -}}
+{{- $byParent := .byParent }}
+{{- $depth := .depth }}
+{{- $maxDepth := .maxDepth }}
+{{- $sort := .sort }}
+{{- $reverse := .reverse }}
+{{- $dir := cond $reverse "desc" "asc" }}
+
+{{- /* 同値はタイトル順にするため、先にタイトルで並べてから安定ソートする */}}
+{{- $nodes := sort .nodes "Title" }}
+{{- if eq $sort "title" }}{{ $nodes = sort $nodes "Title" $dir }}
+{{- else if eq $sort "creation" }}{{ $nodes = sort $nodes "Date" $dir }}
+{{- else if eq $sort "modified" }}{{ $nodes = sort $nodes "Lastmod" $dir }}
+{{- else }}{{ $nodes = sort $nodes "Weight" $dir }}
+{{- end }}
+{{- if gt .first 0 }}{{ $nodes = first .first $nodes }}{{ end }}
+
+{{- $style := .style }}
+{{- if not $style }}<ul>{{ end }}
+{{- range $node := $nodes }}
+  {{- $id := $node.Params.page_id | default "" }}
+  {{- $children := slice }}
+  {{- if and $id (lt $depth $maxDepth) (lt $depth 20) }}
+    {{- with index $byParent $id }}{{ $children = . }}{{ end }}
+  {{- end }}
+  {{- $label := "" }}
+  {{- if $node.Params.is_folder }}
+    {{- $label = printf `<span class="children-folder">%s</span>` (htmlEscape $node.Title) }}
+  {{- else }}
+    {{- $label = printf `<a href="%s">%s</a>` $node.RelPermalink (htmlEscape $node.Title) }}
+  {{- end }}
+  {{- $sub := "" }}
+  {{- if $children }}
+    {{- $sub = partial "children-list.html" (dict
+          "nodes" $children "byParent" $byParent "depth" (add $depth 1) "maxDepth" $maxDepth
+          "sort" $sort "reverse" $reverse "first" 0 "style" "") }}
+  {{- end }}
+  {{- if $style }}
+{{ printf `<%s class="children-heading">%s</%s>` $style $label $style | safeHTML }}
+{{ $sub }}
+  {{- else }}
+<li>{{ $label | safeHTML }}{{ $sub }}</li>
+  {{- end }}
+{{- end }}
+{{- if not $style }}</ul>{{ end }}
