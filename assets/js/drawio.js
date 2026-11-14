@@ -16,7 +16,11 @@
         script.onload = function () { resolve(); };
         script.onerror = function () {
           viewerLoading = null;
-          reject(new Error('draw.io ビューアを読み込めません: ' + url));
+          script.remove();
+          // <script> の失敗からは理由が分からないので、同じ URL を取得し直して状態を調べる
+          explainLoadFailure(url).then(function (reason) {
+            reject(new Error('draw.io ビューアのスクリプトを読み込めません（' + reason + '）: ' + url));
+          });
         };
         document.head.appendChild(script);
       });
@@ -24,10 +28,26 @@
     return viewerLoading;
   }
 
+  // スクリプトを読み込めなかった理由を調べて、コンソールに出す文言にする
+  function explainLoadFailure(url) {
+    return fetch(url, { method: 'HEAD' }).then(function (res) {
+      if (res.status === 404) {
+        return 'HTTP 404。テーマの static/vendor/drawio/viewer-static.min.js がサイトに配置されていません。' +
+          'hugo server を起動したあとにテーマを更新した場合は、hugo server を再起動してください';
+      }
+      if (!res.ok) return 'HTTP ' + res.status;
+      return 'ファイルは取得できますが、スクリプトとして実行できません。Content-Type: ' + res.headers.get('Content-Type');
+    }, function (err) {
+      return 'サーバーに接続できません: ' + err.message;
+    });
+  }
+
   function fetchDiagram(src) {
     return fetch(src).then(function (res) {
-      if (!res.ok) throw new Error('図ファイルを取得できません（' + res.status + '）: ' + src);
+      if (!res.ok) throw new Error('図ファイルを取得できません（HTTP ' + res.status + '）: ' + src);
       return res.text();
+    }, function (err) {
+      throw new Error('図ファイルを取得できません（' + err.message + '）: ' + src);
     });
   }
 
@@ -47,7 +67,7 @@
         // 図ファイルが壊れているとビューアが何も知らせずに終わることがあるので、待つ時間を区切る
         var timer = setTimeout(function () {
           holder.remove();
-          reject(new Error('draw.io ビューアが図を表示できません: ' + src));
+          reject(new Error('draw.io ビューアが ' + (OPEN_TIMEOUT / 1000) + ' 秒たっても図を表示しません（図ファイルが壊れている可能性があります）: ' + src));
         }, OPEN_TIMEOUT);
         holder.className = 'drawio-viewer-holder';
         holder.setAttribute('aria-hidden', 'true');
@@ -105,8 +125,9 @@
       showError(button, '');
       done();
     }, function (err) {
-      if (window.console) console.error(err);
-      showError(button, '拡大表示を開けませんでした');
+      // 画面には短く出し、理由はコンソールに出す
+      if (window.console) console.error('[drawio] 拡大表示を開けませんでした: ' + (err && err.message ? err.message : err));
+      showError(button, '拡大表示を開けませんでした（理由はブラウザのコンソールに表示しています）');
       done();
     });
   });
