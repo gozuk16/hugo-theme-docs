@@ -1,0 +1,43 @@
+{{- /*
+  draw.io の図（Confluence の draw.io アプリのマクロ）。
+  変換器が図ファイルから作ってページのフォルダに書き出した SVG（src）を、ビルド時に本文へ差し込む。
+  <img> で読み込んだりリンクで包んだりせずに差し込むことで、図の中の文字を選択できる。
+  - src:   SVG のファイル名（confluence-drawio-1.svg など）
+  - file:  元の図ファイル（.drawio）のファイル名。ページのフォルダにあれば「拡大表示」ボタンを出す
+  - title: 図の名前（読み上げ用）
+  拡大表示は同梱の draw.io ビューア（static/vendor/drawio）で行う。ビューアはボタンを押したときに
+  assets/js/drawio.js が読み込み、図ファイルをブラウザの中で描く（図のデータは外部に送らない）。
+*/ -}}
+{{- $file := .Get "file" | default "" }}
+{{- $title := .Get "title" | default $file }}
+{{- with .Get "src" }}
+  {{- with $.Page.Resources.Get . }}
+<figure class="drawio">
+  <div class="drawio-diagram" role="group" aria-label="{{ $title }}">{{ .Content | safeHTML }}</div>
+    {{- if $file }}
+      {{- with $.Page.Resources.Get $file }}
+  <button type="button" class="drawio-zoom" data-drawio-src="{{ .RelPermalink }}" data-drawio-viewer="{{ "vendor/drawio/viewer-static.min.js" | relURL }}" aria-label="{{ $title }} を拡大表示">拡大表示</button>
+      {{- else }}
+        {{- warnf "drawio ショートコード: 図ファイル %s が見つからないため拡大表示ボタンを出しません（%s）" $file $.Page.Path }}
+      {{- end }}
+    {{- end }}
+</figure>
+    {{- /* ボタンのスクリプトは、図のあるページで 1 回だけ読み込む */}}
+    {{- if not ($.Page.Store.Get "drawio-js") }}
+      {{- $.Page.Store.Set "drawio-js" true }}
+      {{- with resources.Get "js/drawio.js" }}
+        {{- if hugo.IsDevelopment }}
+<script src="{{ .RelPermalink }}" defer></script>
+        {{- else }}
+          {{- with . | minify | fingerprint }}
+<script src="{{ .RelPermalink }}" integrity="{{ .Data.Integrity }}" crossorigin="anonymous" defer></script>
+          {{- end }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+  {{- else }}
+    {{- warnf "drawio ショートコード: %s が見つかりません（%s）" . $.Page.Path }}
+  {{- end }}
+{{- else }}
+  {{- warnf "drawio ショートコード: src が指定されていません（%s）" $.Page.Path }}
+{{- end }}

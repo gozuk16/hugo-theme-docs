@@ -229,3 +229,25 @@ html.js[data-sidebar="collapsed"] .sidebar-scroll { visibility: hidden; }
 /* ドラッグ中は本文のテキスト選択を止める */
 html.sidebar-dragging { cursor: col-resize; }
 html.sidebar-dragging body { user-select: none; }
+
+/* draw.io の図（drawio ショートコード）。SVG を本文に直接差し込み、幅に収まらない図は縮めて表示する。
+   縮んで読みにくい図は「拡大表示」ボタンで draw.io ビューアを開いて見る */
+.drawio { margin: 1rem 0; }
+.drawio-diagram svg { max-width: 100%; height: auto; }
+.drawio-zoom {
+  margin-top: .25rem;
+  padding: .15rem .6rem;
+  font: inherit;
+  font-size: .8rem;
+  color: #444;
+  background: #f5f5f5;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.drawio-zoom:hover { background: #eaeaea; }
+.drawio-zoom:disabled { cursor: progress; opacity: .6; }
+.drawio-error { margin-left: .5rem; font-size: .8rem; color: #b00020; }
+/* ビューアが図を描くための作業用の要素。画面の外に置く */
+.drawio-viewer-holder { position: absolute; left: -10000px; top: 0; width: 800px; }
+@media print { .drawio-zoom, .drawio-error { display: none; } }
