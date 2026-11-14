@@ -5,6 +5,8 @@
   - src:   SVG のファイル名（confluence-drawio-1.svg など）
   - file:  元の図ファイル（.drawio）のファイル名。ページのフォルダにあれば「拡大表示」ボタンを出す
   - title: 図の名前（読み上げ用）
+  検索（Pagefind）は <svg> の中身を索引に入れないので、図の中の文字は検索の対象にならない
+  （SVG に入っている代替文言「Text is not SVG - cannot display」も拾われない）。ボタンの文字も索引から外す。
   拡大表示は同梱の draw.io ビューア（static/vendor/drawio）で行う。ビューアはボタンを押したときに
   assets/js/drawio.js が読み込み、図ファイルをブラウザの中で描く（図のデータは外部に送らない）。
 */ -}}
@@ -16,7 +18,7 @@
   <div class="drawio-diagram" role="group" aria-label="{{ $title }}">{{ .Content | safeHTML }}</div>
     {{- if $file }}
       {{- with $.Page.Resources.Get $file }}
-  <button type="button" class="drawio-zoom" data-drawio-src="{{ .RelPermalink }}" data-drawio-viewer="{{ "vendor/drawio/viewer-static.min.js" | relURL }}" aria-label="{{ $title }} を拡大表示">拡大表示</button>
+  <button type="button" class="drawio-zoom" data-pagefind-ignore data-drawio-src="{{ .RelPermalink }}" data-drawio-viewer="{{ "vendor/drawio/viewer-static.min.js" | relURL }}" aria-label="{{ $title }} を拡大表示">拡大表示</button>
       {{- else }}
         {{- warnf "drawio ショートコード: 図ファイル %s が見つからないため拡大表示ボタンを出しません（%s）" $file $.Page.Path }}
       {{- end }}
