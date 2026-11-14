@@ -2,6 +2,7 @@
   draw.io の図（Confluence の draw.io アプリのマクロ）。
   変換器が図ファイルから作ってページのフォルダに書き出した SVG（src）を、ビルド時に本文へ差し込む。
   <img> で読み込んだりリンクで包んだりせずに差し込むことで、図の中の文字を選択できる。
+  SVG を Markdown として解釈させないよう、山括弧の形（{{&lt; drawio … &gt;}}）で呼ぶこと（パーセント記号の形では呼ばない）。
   - src:   SVG のファイル名（confluence-drawio-1.svg など）
   - file:  元の図ファイル（.drawio）のファイル名。ページのフォルダにあれば「拡大表示」ボタンを出す
   - title: 図の名前（読み上げ用）
@@ -15,7 +16,7 @@
 {{- with .Get "src" }}
   {{- with $.Page.Resources.Get . }}
 <figure class="drawio">
-  <div class="drawio-diagram" role="group" aria-label="{{ $title }}">{{ .Content | safeHTML }}</div>
+  <div class="drawio-diagram"{{ with $title }} role="group" aria-label="{{ . }}"{{ end }}>{{ .Content | safeHTML }}</div>
     {{- if $file }}
       {{- with $.Page.Resources.Get $file }}
   <button type="button" class="drawio-zoom" data-pagefind-ignore data-drawio-src="{{ .RelPermalink }}" data-drawio-viewer="{{ "vendor/drawio/viewer-static.min.js" | relURL }}" aria-label="{{ $title }} を拡大表示">拡大表示</button>

@@ -82,7 +82,9 @@
         // ビューアは要素に図を描いてから拡大表示を開く作りなので、描く先を画面の外に置く
         var holder = document.createElement('div');
         // 図ファイルが壊れているとビューアが何も知らせずに終わることがあるので、待つ時間を区切る
+        var timedOut = false;
         var timer = setTimeout(function () {
+          timedOut = true;
           holder.remove();
           reject(new Error('draw.io ビューアが ' + (OPEN_TIMEOUT / 1000) + ' 秒たっても図を表示しません（図ファイルが壊れている可能性があります）: ' + src));
         }, OPEN_TIMEOUT);
@@ -98,6 +100,8 @@
         document.body.appendChild(holder);
         try {
           window.GraphViewer.createViewerForElement(holder, function (viewer) {
+            // 打ち切ってエラーを出したあとに遅れて描き終えても、いきなり開かない
+            if (timedOut) return;
             clearTimeout(timer);
             viewers[src] = viewer;
             viewer.showLocalLightbox();
