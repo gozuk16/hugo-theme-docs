@@ -6,6 +6,7 @@
   var viewerLoading = null; // ビューアの読み込み（1 回だけ）
   var viewers = {};         // 図ファイルの URL → 作成済みのビューア
   var OPEN_TIMEOUT = 15000; // ビューアが図を描き終えるのを待つ時間（ミリ秒）
+  var CHECK_TIMEOUT = 5000; // スクリプトを読み込めなかった理由を調べる通信を待つ時間（ミリ秒）
 
   function loadViewer(url) {
     if (window.GraphViewer) return Promise.resolve();
@@ -15,12 +16,14 @@
         script.src = url;
         script.onload = function () { resolve(); };
         script.onerror = function () {
-          viewerLoading = null;
           script.remove();
-          // <script> の失敗からは理由が分からないので、同じ URL を取得し直して状態を調べる
-          explainLoadFailure(url).then(function (reason) {
+          // 次に押したときは読み込みからやり直す。調べている間に押されても二重に読み込まないよう、調べ終えてから戻す
+          var fail = function (reason) {
+            viewerLoading = null;
             reject(new Error('draw.io ビューアのスクリプトを読み込めません（' + reason + '）: ' + url));
-          });
+          };
+          // <script> の失敗からは理由が分からないので、同じ URL を取得し直して状態を調べる
+          explainLoadFailure(url).then(fail, function () { fail('理由は調べられませんでした'); });
         };
         document.head.appendChild(script);
       });
@@ -28,9 +31,21 @@
     return viewerLoading;
   }
 
-  // スクリプトを読み込めなかった理由を調べて、コンソールに出す文言にする
+  // スクリプトを読み込めなかった理由を調べて、コンソールに出す文言にする。
+  // 応答が無いままボタンが戻らなくならないよう、待つ時間を区切る
   function explainLoadFailure(url) {
-    return fetch(url, { method: 'HEAD' }).then(function (res) {
+    var options = { method: 'HEAD', cache: 'no-store' };
+    var timer = null;
+    if (window.AbortController) {
+      var controller = new AbortController();
+      options.signal = controller.signal;
+      timer = setTimeout(function () { controller.abort(); }, CHECK_TIMEOUT);
+    }
+    return fetch(url, options).then(function (res) {
+      clearTimeout(timer);
+      if (res.status === 405 || res.status === 501) {
+        return 'サーバーが HEAD に対応していないため、理由は調べられませんでした（HTTP ' + res.status + '）';
+      }
       if (res.status === 404) {
         return 'HTTP 404。テーマの static/vendor/drawio/viewer-static.min.js がサイトに配置されていません。' +
           'hugo server を起動したあとにテーマを更新した場合は、hugo server を再起動してください';
@@ -38,7 +53,9 @@
       if (!res.ok) return 'HTTP ' + res.status;
       return 'ファイルは取得できますが、スクリプトとして実行できません。Content-Type: ' + res.headers.get('Content-Type');
     }, function (err) {
-      return 'サーバーに接続できません: ' + err.message;
+      clearTimeout(timer);
+      if (err && err.name === 'AbortError') return 'サーバーが ' + (CHECK_TIMEOUT / 1000) + ' 秒たっても応答しません';
+      return 'サーバーに接続できません: ' + (err && err.message ? err.message : err);
     });
   }
 
