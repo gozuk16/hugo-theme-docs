@@ -1,0 +1,46 @@
+{{- /*
+  draw.io の図（Confluence の draw.io アプリのマクロ）。
+  変換器が図ファイルから作ってページのフォルダに書き出した SVG（src）を、ビルド時に本文へ差し込む。
+  <img> で読み込んだりリンクで包んだりせずに差し込むことで、図の中の文字を選択できる。
+  SVG を Markdown として解釈させないよう、山括弧の形（{{&lt; drawio … &gt;}}）で呼ぶこと（パーセント記号の形では呼ばない）。
+  - src:   SVG のファイル名（confluence-drawio-1.svg など）
+  - file:  元の図ファイル（.drawio）のファイル名。ページのフォルダにあれば「拡大表示」ボタンを出す
+  - title: 図の名前（読み上げ用）
+  検索（Pagefind）は <svg> の中身を索引に入れないので、図の中の文字は検索の対象にならない
+  （SVG に入っている代替文言「Text is not SVG - cannot display」も拾われない）。ボタンの文字も索引から外す。
+  拡大表示は同梱の draw.io ビューア（static/vendor/drawio）で行う。ビューアはボタンを押したときに
+  assets/js/drawio.js が読み込み、図ファイルをブラウザの中で描く（図のデータは外部に送らない）。
+*/ -}}
+{{- $file := .Get "file" | default "" }}
+{{- $title := .Get "title" | default $file }}
+{{- with .Get "src" }}
+  {{- with $.Page.Resources.Get . }}
+<figure class="drawio">
+  <div class="drawio-diagram"{{ with $title }} role="group" aria-label="{{ . }}"{{ end }}>{{ .Content | safeHTML }}</div>
+    {{- if $file }}
+      {{- with $.Page.Resources.Get $file }}
+  <button type="button" class="drawio-zoom" data-pagefind-ignore data-drawio-src="{{ .RelPermalink }}" data-drawio-viewer="{{ "vendor/drawio/viewer-static.min.js" | relURL }}" aria-label="{{ $title }} を拡大表示">拡大表示</button>
+      {{- else }}
+        {{- warnf "drawio ショートコード: 図ファイル %s が見つからないため拡大表示ボタンを出しません（%s）" $file $.Page.Path }}
+      {{- end }}
+    {{- end }}
+</figure>
+    {{- /* ボタンのスクリプトは、図のあるページで 1 回だけ読み込む */}}
+    {{- if not ($.Page.Store.Get "drawio-js") }}
+      {{- $.Page.Store.Set "drawio-js" true }}
+      {{- with resources.Get "js/drawio.js" }}
+        {{- if hugo.IsDevelopment }}
+<script src="{{ .RelPermalink }}" defer></script>
+        {{- else }}
+          {{- with . | minify | fingerprint }}
+<script src="{{ .RelPermalink }}" integrity="{{ .Data.Integrity }}" crossorigin="anonymous" defer></script>
+          {{- end }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+  {{- else }}
+    {{- warnf "drawio ショートコード: %s が見つかりません（%s）" . $.Page.Path }}
+  {{- end }}
+{{- else }}
+  {{- warnf "drawio ショートコード: src が指定されていません（%s）" $.Page.Path }}
+{{- end }}
