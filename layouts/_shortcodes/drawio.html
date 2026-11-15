@@ -5,6 +5,8 @@
   SVG を Markdown として解釈させないよう、山括弧の形（{{&lt; drawio … &gt;}}）で呼ぶこと（パーセント記号の形では呼ばない）。
   - src:   SVG のファイル名（confluence-drawio-1.svg など）
   - file:  元の図ファイル（.drawio）のファイル名。ページのフォルダにあれば「拡大表示」ボタンを出す
+  - page:  表示するページの ID（図ファイルの <diagram id="…">）。複数ページの図で、1 ページ目のほかを表示するときに指定する。
+           src の SVG はそのページを描いたもので、拡大表示もそのページを開く。省略すると 1 ページ目を開く
   - title: 図の名前（読み上げ用）
   検索（Pagefind）は <svg> の中身を索引に入れないので、図の中の文字は検索の対象にならない
   （SVG に入っている代替文言「Text is not SVG - cannot display」も拾われない）。ボタンの文字も索引から外す。
@@ -13,13 +15,14 @@
 */ -}}
 {{- $file := .Get "file" | default "" }}
 {{- $title := .Get "title" | default $file }}
+{{- $page := .Get "page" | default "" }}
 {{- with .Get "src" }}
   {{- with $.Page.Resources.Get . }}
 <figure class="drawio">
   <div class="drawio-diagram"{{ with $title }} role="group" aria-label="{{ . }}"{{ end }}>{{ .Content | safeHTML }}</div>
     {{- if $file }}
       {{- with $.Page.Resources.Get $file }}
-  <button type="button" class="drawio-zoom" data-pagefind-ignore data-drawio-src="{{ .RelPermalink }}" data-drawio-viewer="{{ "vendor/drawio/viewer-static.min.js" | relURL }}" aria-label="{{ $title }} を拡大表示">拡大表示</button>
+  <button type="button" class="drawio-zoom" data-pagefind-ignore data-drawio-src="{{ .RelPermalink }}"{{ with $page }} data-drawio-page="{{ . }}"{{ end }} data-drawio-viewer="{{ "vendor/drawio/viewer-static.min.js" | relURL }}" aria-label="{{ $title }} を拡大表示">拡大表示</button>
       {{- else }}
         {{- warnf "drawio ショートコード: 図ファイル %s が見つからないため拡大表示ボタンを出しません（%s）" $file $.Page.Path }}
       {{- end }}
