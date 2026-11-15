@@ -4,7 +4,7 @@
 // 図ファイルは同じサイトから取得してブラウザの中で描くので、図のデータは外部に送らない。
 (function () {
   var viewerLoading = null; // ビューアの読み込み（1 回だけ）
-  var viewers = {};         // 図ファイルの URL → 作成済みのビューア
+  var viewers = {};         // 図ファイルの URL とページの ID → 作成済みのビューア
   var OPEN_TIMEOUT = 15000; // ビューアが図を描き終えるのを待つ時間（ミリ秒）
   var CHECK_TIMEOUT = 5000; // スクリプトを読み込めなかった理由を調べる通信を待つ時間（ミリ秒）
 
@@ -70,8 +70,12 @@
 
   function openLightbox(button) {
     var src = button.getAttribute('data-drawio-src');
-    if (viewers[src]) {
-      viewers[src].showLocalLightbox();
+    // 複数ページの図で、最初に開くページの ID（図ファイルの <diagram id="…">）。指定が無ければ 1 ページ目を開く
+    var page = button.getAttribute('data-drawio-page');
+    // 同じ図ファイルでも、開くページが違えば別のビューアにする（URL に空白は入らないので、空白で区切る）
+    var key = src + ' ' + (page || '');
+    if (viewers[key]) {
+      viewers[key].showLocalLightbox();
       return Promise.resolve();
     }
     return Promise.all([
@@ -90,20 +94,23 @@
         }, OPEN_TIMEOUT);
         holder.className = 'drawio-viewer-holder';
         holder.setAttribute('aria-hidden', 'true');
-        holder.setAttribute('data-mxgraph', JSON.stringify({
+        var config = {
           xml: results[1],
           nav: true,
           lightbox: false,
           editable: false, // 編集ボタン（外部の draw.io を開く）は出さない
           toolbar: 'pages zoom layers'
-        }));
+        };
+        // ビューアは、図ファイルにその ID のページが無ければ 1 ページ目を開く
+        if (page) config.pageId = page;
+        holder.setAttribute('data-mxgraph', JSON.stringify(config));
         document.body.appendChild(holder);
         try {
           window.GraphViewer.createViewerForElement(holder, function (viewer) {
             // 打ち切ってエラーを出したあとに遅れて描き終えても、いきなり開かない
             if (timedOut) return;
             clearTimeout(timer);
-            viewers[src] = viewer;
+            viewers[key] = viewer;
             viewer.showLocalLightbox();
             resolve();
           });
